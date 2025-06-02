@@ -1,13 +1,15 @@
 import { Router } from "express";
-import {upload} from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { createPatient, getPatientDetails } from "../controllers/patient.controller.js";
-import { authorizeRole } from "../middlewares/authorizeRole.middleware.js";
+import { createPatient, deletePatient, getAppointmentsForPatient, getNearbyHospitals, getPatientDetails } from "../controllers/patient.controller.js";
+import  authorizeRole  from "../middlewares/authorizeRole.middleware.js";
 
 const router=Router()
 
 router.route("/create-patient").post(verifyJWT, authorizeRole("patient"), createPatient)
 router.route("/get-patient-details").get(verifyJWT,authorizeRole("patient"), getPatientDetails)
+router.route("/get-appointments-for-patient").get(verifyJWT, authorizeRole("patient"), getAppointmentsForPatient)
+router.route("/delete-patient").get(verifyJWT, authorizeRole("patient"), deletePatient)
+router.route("/get-nearby-hospitals").get(verifyJWT, authorizeRole("patient"), getNearbyHospitals)
 
 
 export default router

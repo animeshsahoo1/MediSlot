@@ -1,7 +1,8 @@
 import mongoose, { Schema } from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const notificationSchema = new Schema({
-  recipient: {                    //Who receives this notification
+  user: {                    //Who receives this notification
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
@@ -19,5 +20,7 @@ const notificationSchema = new Schema({
     default: {},
   },
 }, { timestamps: true });
+
+notificationSchema.plugin(mongooseAggregatePaginate)
 
 export const Notification = mongoose.model("Notification", notificationSchema);

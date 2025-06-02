@@ -1,9 +1,18 @@
-import React from "react";
+import React, { useState } from "react";
 import { assets } from "../assets_frontend/assets";
+import AuthModal from "./AuthModal";
+
 
 const Navbar = () => {
     const [open, setOpen] = React.useState(false)
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalType, setModalType] = useState('login');
+    const openModal = (type) => {
+        setModalType(type);
+        setModalOpen(true);
+    };
     return (
+        <>
         <nav className="flex items-center justify-between px-6 md:px-16 lg:px-24 xl:px-32 py-4 border-b border-gray-300 bg-white relative transition-all">
 
             <a href="#">
@@ -15,7 +24,11 @@ const Navbar = () => {
                 <a href="#" className="hover:scale-110 hover:text-gray-600">Home</a>
                 <a href="#" className="hover:scale-110 hover:text-gray-600">About</a>
                 <a href="#" className="hover:scale-110 hover:text-gray-600">Contact</a>
-                <button className="cursor-pointer px-8 py-2 ml-80 bg-primary hover:bg-primary-dull border border-gray-800 hover:scale-110 transition text-gray-800 hover:text-white rounded-full">
+                <button  onClick={() => {
+                    openModal('login');
+                    setMobileMenuOpen(false);
+                 }}
+                 className="cursor-pointer px-8 py-2 ml-80 bg-primary hover:bg-primary-dull border border-gray-800 hover:scale-110 transition text-gray-800 hover:text-white rounded-full">
                     Login
                 </button>
             </div>
@@ -34,12 +47,19 @@ const Navbar = () => {
                 <a href="#" className="block">Home</a>
                 <a href="#" className="block">About</a>
                 <a href="#" className="block">Contact</a>
-                <button className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
+                <button
+                 onClick={() => {
+                  openModal('login');
+                  setMobileMenuOpen(false);
+                 }}
+                 className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
                     Login
                 </button>
             </div>
 
         </nav>
+        <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} type={modalType} setType={setModalType}/>
+        </>
     )
 }
 

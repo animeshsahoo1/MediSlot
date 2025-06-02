@@ -1,30 +1,68 @@
+import { ApiError } from "./ApiError.js";
+// import dotenv from "dotenv";
+// dotenv.config();
+
 export const getCoordinatesFromAddress = async (address) => {
   try {
-    const { name, street, city, state, country, postcode } = address;
-    //uricomponent converts a string to a uri component i.e abc hospital into abc%20hospital like this
-    const url = `https://api.geoapify.com/v1/geocode/search?name=${encodeURIComponent(name)}&street=${encodeURIComponent(
-      street
-    )}&city=${encodeURIComponent(city)}&state=${encodeURIComponent(
-      state
-    )}&country=${encodeURIComponent(
-      country
-    )}&postcode=${encodeURIComponent(
-      postcode
-    )}&limit=1&format=json&apiKey=${process.env.GEOAPIFY_API_KEY}`;
+    const {
+      name = "",
+      street = "",
+      city = "",
+      state = "",
+      country = "",
+      postcode = ""
+    } = address;
 
-    var requestOptions = {
-        method: 'GET',
-    };
-    const response = await fetch(url, requestOptions);
-    const data = await response.json();
-
-    if (!data.features || data.features.length === 0) {
-      throw new Error("No coordinates found for the given address");
+    if (!process.env.GEOAPIFY_API_KEY) {
+      throw new ApiError(500, "API key not found in environment variables");
     }
-    //check the retun json of the api to see the structure of the returned json format
-    const [lon, lat] = data.features[0].geometry.coordinates;
-    return { lon, lat };
+
+    // Combine all parts into a single search text
+    const fullAddress = `${name} ${street} ${city} ${state} ${postcode} ${country}`;
+    
+    // Step 1: Get coordinates from address
+    const geoUrl = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(fullAddress)}&limit=1&format=json&apiKey=${process.env.GEOAPIFY_API_KEY}`;
+    const geoResponse = await fetch(geoUrl);
+    const geoData = await geoResponse.json();
+
+    if (!geoData.results || geoData.results.length === 0) {
+      throw new ApiError(500, "No location found");
+    }
+
+    const { lon, lat } = geoData.results[0];
+    console.log("Coordinates of address:", lon, lat);
+
+    // Step 2: Search healthcare hospitals within 5km radius of coordinates
+    const radius = 5000; // in meters
+    const placesUrl = `https://api.geoapify.com/v2/places?categories=healthcare.hospital&filter=circle:${lon},${lat},${radius}&limit=1&apiKey=${process.env.GEOAPIFY_API_KEY}`;
+    const placesResponse = await fetch(placesUrl);
+    const placesData = await placesResponse.json();
+    console.log(placesUrl);
+
+    if (!placesData.features || placesData.features.length === 0) {
+      throw new ApiError(500, "No hospitals found nearby");
+    }
+
+    // Extract coordinates of first hospital
+    const [hospitalLon, hospitalLat] = placesData.features[0].geometry.coordinates;
+    return { lon: hospitalLon, lat: hospitalLat };
+
   } catch (error) {
-    return { error: error.message || "Error fetching coordinates" };
+    console.log("err:", error.message);
+    return null;
   }
 };
+
+// const addressk = {
+//   name: "sum ultimate hospital",
+//   street: "kalinga nagar",
+//   city: "bhubaneswar",
+//   state: "odisha",
+//   country: "india",
+//   postcode: "751003"
+// };
+
+// (async () => {
+//   const hospitalCoords = await getCoordinatesFromAddress(addressk);
+//   console.log("First nearby hospital coordinates:", hospitalCoords);
+// })();

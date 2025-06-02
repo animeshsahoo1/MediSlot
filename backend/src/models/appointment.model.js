@@ -3,9 +3,9 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const appointmentSchema=Schema({
     patient: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Patient",
+        required: true,
     },
     doctor: {
         type: mongoose.Schema.Types.ObjectId,
@@ -31,7 +31,7 @@ const appointmentSchema=Schema({
     },
     status: {
         type: String,
-        enum: ["booked", "completed", "cancelled"],
+        enum: ["booked", "completed", "cancelled", "pending"],//pending for uncomplete payment
         default: "booked",
     }
 },{timestamps:true})

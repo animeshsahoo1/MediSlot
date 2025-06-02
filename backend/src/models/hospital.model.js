@@ -1,4 +1,5 @@
 import mongoose,{Schema} from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const addressSchema = new mongoose.Schema({
   name: String,         // e.g., "Ayurvedic Hospital"
@@ -49,5 +50,5 @@ const hospitalSchema=new Schema({
 
 hospitalSchema.index({ location: '2dsphere' });
 
-
+hospitalSchema.plugin(mongooseAggregatePaginate)
 export const Hospital= mongoose.model("Hospital", hospitalSchema)

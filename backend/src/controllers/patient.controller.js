@@ -2,6 +2,9 @@ import { Patient } from "../models/patient.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { Appointment } from "../models/appointment.model.js";
+import { Hospital } from "../models/hospital.model.js";
+import { isValidObjectId } from "mongoose";
 
 //!AUTHORIZE ROLE MIDDLEWARE ALREADY CHECKS IF ROLE IS PATIENT SO WE DONT HAVE TO CHECK IT IN ANY OF CONTROLLERS
 
@@ -44,19 +47,91 @@ const getPatientDetails = asyncHandler(async (req, res) => {
     res.status(200).json(new ApiResponse(200, patient, "Patient profile fetched successfully"));
 });
 
-const appointmentList=asyncHandler(async(req,res)=>{
-    const userId = req.user._id;
+const getAppointmentsForPatient = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
 
-    const patient = await Patient.findOne({ user: userId });
+  const patient = await Patient.findOne({ user: userId }).populate("user", "-password -refreshToken");
 
-    if (!patient) {
-        throw new ApiError(404, "Patient profile not found");
+  if (!patient) {
+    throw new ApiError(404, "Patient profile not found");
+  }
+  const patientId=patient._id
+  const { status } = req.query;
+
+  if (!isValidObjectId(patientId)) {
+    throw new ApiError(400, "Invalid patient ID");
+  }
+
+  const query = { patient: patientId };
+  if (status) {
+    query.status = status;
+  }
+
+  const appointments = await Appointment.find(query)
+    .populate("doctor", "specialization experience")
+    .populate("hospital", "name")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json(new ApiResponse(200, appointments, "Appointments fetched successfully"));
+});
+
+const deletePatient = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  const findPatient = await Patient.findOne({ user: userId }).populate("user", "-password -refreshToken");
+
+  if (!findPatient) {
+    throw new ApiError(404, "Patient profile not found");
+  }
+  const patientId=findPatient._id
+
+  const patient = await Hospital.findById(patientId);
+  if (!patient) {
+    throw new ApiError(404, "Hospital not found");
+  }
+
+  // Optional: check if the user is authorized to delete
+  if (patient.user.toString() !== req.user._id.toString()) {
+    throw new ApiError(403, "Unauthorized to delete this hospital");
+  }
+
+  const deletePatient=await Patient.deleteOne(patient._id);
+   if(deletePatient.deletedCount===0){
+        throw new ApiError(500, "unable to delete hospital")
     }
 
-})
+    res.status(200).json(new ApiResponse(200, deleteHospital, "hospital deleted successfully"))
+});
+
+const getNearbyHospitals = asyncHandler(async (req, res) => {
+    const { lat, lon, maxDistance = 5000 } = req.query; //lat lon will be sent from frontend using geolocation API in browser
+
+    if (!lat || !lon) {
+        throw new ApiError(400, "Latitude and longitude are required");
+    }
+
+    const hospitals = await Hospital.find({
+        location: {
+            $near: {
+                $geometry: {
+                    type: "Point",
+                    coordinates: [parseFloat(lon), parseFloat(lat)]
+                },
+                $maxDistance: parseFloat(maxDistance) // optional: filter by radius
+            }
+        }
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, hospitals, "Nearby hospitals fetched successfully")
+    );
+});
 
 
 export {
     createPatient,
     getPatientDetails,
+    getAppointmentsForPatient,
+    deletePatient,
+    getNearbyHospitals
 }
