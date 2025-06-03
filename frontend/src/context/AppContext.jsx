@@ -22,12 +22,13 @@ export const AppContextProvider=({children})=>{
             credentials: "include", // important,to send cookies!
         });
         const data = await res.json();
+        console.log(data);
 
         if (res.ok) {
-            setUser(data.user);
+            setUser(data);
             setIsAuthenticated(true);
-            setRole(data.user.role);
-            setAvatar(data.user.avatar?.trim() || assets.default_avatar)
+            setRole(data.role);
+            setAvatar(data.avatar?.trim() || assets.default_avatar)
         } else {
             setUser(null);
             setIsAuthenticated(false);

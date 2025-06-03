@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser"
 const app=express()
 
 //cors middleware
-app.set('trust proxy', 1); // or true, but '1' is recommended for one proxy hop (like Render)
+
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true
