@@ -26,7 +26,7 @@ const Navbar = () => {
                 <a href="#" className="hover:scale-110 hover:text-gray-600">Contact</a>
                 <button  onClick={() => {
                     openModal('login');
-                    setMobileMenuOpen(false);
+                    // setMobileMenuOpen(false);
                  }}
                  className="cursor-pointer px-8 py-2 ml-80 bg-primary hover:bg-primary-dull border border-gray-800 hover:scale-110 transition text-gray-800 hover:text-white rounded-full">
                     Login
@@ -50,7 +50,7 @@ const Navbar = () => {
                 <button
                  onClick={() => {
                   openModal('login');
-                  setMobileMenuOpen(false);
+                //   setMobileMenuOpen(false);
                  }}
                  className="cursor-pointer px-6 py-2 mt-2 bg-indigo-500 hover:bg-indigo-600 transition text-white rounded-full text-sm">
                     Login

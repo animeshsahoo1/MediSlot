@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import authorizeRole from "../middlewares/authorizeRole.middleware.js"
-import { createDoctor, deleteDoctor, getAllDoctors, getAppointmentsForDoctor, getDoctorById, setSchedule, setUnavailableStatus, updateDoctor, updateSchedulePart } from "../controllers/doctor.controller.js";
+import { createDoctor, deleteDoctor, getAllDoctors, getAppointmentsForDoctor, getDoctorById, setSchedule, setUnavailableStatus, updateDoctor, updateDoctorVerificationStatus, updateSchedulePart } from "../controllers/doctor.controller.js";
 
 const router=Router()
 
@@ -14,6 +14,7 @@ router.route("/set-schedule").post(verifyJWT, authorizeRole("doctor"), setSchedu
 router.route("/update-schedule").post(verifyJWT, authorizeRole("doctor"), updateSchedulePart)
 router.route("/update-doctor").patch(verifyJWT, authorizeRole("doctor"), updateDoctor)
 router.route("/get-appointments-for-doctor").get(verifyJWT, authorizeRole("doctor"), getAppointmentsForDoctor)
+router.route("/change-verification").patch(verifyJWT, authorizeRole("hospital"), updateDoctorVerificationStatus)
 /*
 !router with params must always come at last as express matches routes in order of how you have written them
 !for example when i wrote this earlier 

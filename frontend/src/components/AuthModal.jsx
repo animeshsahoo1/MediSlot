@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const AuthModal = ({ isOpen, onClose, type, setType }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,8 +17,8 @@ const handleSubmit = async (e) => {
   e.preventDefault();
 
   const url = isLogin
-    ? "http://localhost:8000/api/v1/users/login"
-    : "http://localhost:8000/api/v1/users/register";
+    ? `${import.meta.env.VITE_BACKEND_URL}/users/login`
+    : `${import.meta.env.VITE_BACKEND_URL}/users/register`;
 
   const payload = isLogin
     ? { email, password }
@@ -48,7 +49,7 @@ const handleSubmit = async (e) => {
     onClose(); // Close modal
   } catch (error) {
     console.error(isLogin ? "Login error:" : "Registration error:", error.message);
-    // Optionally show error message to user here
+    toast.error(error.message)
   }
 };
 
@@ -65,7 +66,9 @@ const handleSubmit = async (e) => {
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
         >
-          <X size={24} />
+          <X size={24} onClick={()=>{
+            setIsLogin(true);
+          }}/>
         </button>
         
         {/* Colorful top bar */}
