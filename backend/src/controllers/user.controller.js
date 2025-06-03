@@ -116,7 +116,7 @@ const loginUser=asyncHandler(async(req,res)=>{
     //*options are sent with cokkies to ensure more security
     const options = {
         httpOnly: true,
-        secure,//secure must be false if you are running your frontend in localhost as it is http bu in production it must be true
+        secure: true,//secure must be false if you are running your frontend in localhost as it is http bu in production it must be true
         sameSite: "None", // Must be "None" for cross-site cookies
     }
 
