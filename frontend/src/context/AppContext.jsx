@@ -41,6 +41,7 @@ export const AppContextProvider=({children})=>{
         setRole(null);
         setAvatar(assets.default_avatar);
         toast.error(err.message)
+        console.log(err.message)
 
         } finally {
         setLoading(false);
