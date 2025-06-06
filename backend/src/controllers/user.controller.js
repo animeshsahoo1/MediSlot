@@ -230,9 +230,9 @@ const getCurrentUser = asyncHandler(async(req, res) => {
 })
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
-    const {fullName, email} = req.body
+    const {fullName, email, userName} = req.body
 
-    if (!fullName || !email) {
+    if (!fullName || !email || !userName) {
         throw new ApiError(400, "All fields are required")
     }
 
@@ -241,12 +241,13 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
         {
             $set: {
                 fullName,
-                email: email
+                email: email,
+                userName
             }
         },
         {new: true}//updated information is sent to u, so u can store it if this is used
         
-    ).select("-password")
+    ).select("-password -refreshToken")
 
     return res
     .status(200)
