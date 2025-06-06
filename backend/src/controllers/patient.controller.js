@@ -41,7 +41,7 @@ const getPatientDetails = asyncHandler(async (req, res) => {
     const patient = await Patient.findOne({ user: userId }).populate("user", "-password -refreshToken");
 
     if (!patient) {
-        throw new ApiError(404, "Patient profile not found");
+      throw new ApiError(404, "Patient profile not found");
     }
 
     res.status(200).json(new ApiResponse(200, patient, "Patient profile fetched successfully"));
@@ -127,11 +127,43 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
     );
 });
 
+const updatePatient = asyncHandler(async (req, res) => {
+  const { gender, dob } = req.body;
+  if (!gender && !dob) {
+    throw new ApiError(400, "One of the patient fields must be provided");
+  }
+
+  const userId = req.user._id;
+
+  const patient = await Patient.findOne({ user: userId });
+  if (!patient) {
+    throw new ApiError(404, "Patient profile not found");
+  }
+
+  // Build update object only with provided fields
+  const updateFields = {};
+  if (gender) updateFields.gender = gender;
+  if (dob) updateFields.dob = dob;
+
+  const updatedPatient = await Patient.findByIdAndUpdate(
+    patient._id,
+    updateFields,
+    { new: true }
+  ).populate("user", "-password -refreshToken");
+
+  if (!updatedPatient) {
+    throw new ApiError(500, "Failed to update patient info");
+  }
+
+  res.status(200).json(new ApiResponse(200, updatedPatient, "Updated patient successfully"));
+});
+
 
 export {
     createPatient,
     getPatientDetails,
     getAppointmentsForPatient,
     deletePatient,
-    getNearbyHospitals
+    getNearbyHospitals,
+    updatePatient
 }

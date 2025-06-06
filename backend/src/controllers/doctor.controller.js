@@ -282,6 +282,18 @@ const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
   );
 });
 
+const getDoctorDetails = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+
+    const doctor = await Doctor.findOne({ user: userId }).populate("user", "-password -refreshToken");
+
+    if (!doctor) {
+        throw new ApiError(404, "Doctor profile not found");
+    }
+
+    res.status(200).json(new ApiResponse(200, doctor, "Doctor profile fetched successfully"));
+});
+
 
 
 
@@ -295,5 +307,6 @@ export{
     setUnavailableStatus,
     setSchedule,
     updateSchedulePart,
-    updateDoctorVerificationStatus
+    updateDoctorVerificationStatus,
+    getDoctorDetails
 }

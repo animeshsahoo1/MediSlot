@@ -201,6 +201,17 @@ const getAllHospitals = asyncHandler(async (req, res) => {
     );
 });
 
+const getHospitalDetails = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+
+    const hospital = await Hospital.findOne({ user: userId }).populate("user", "-password -refreshToken");
+
+    if (!hospital) {
+        throw new ApiError(404, "Doctor profile not found");
+    }
+
+    res.status(200).json(new ApiResponse(200, hospital, "Doctor profile fetched successfully"));
+});
 
 
 export{
@@ -208,5 +219,6 @@ export{
     getHospitalById,
     updateHospital,
     deleteHospital,
-    getAllHospitals
+    getAllHospitals,
+    getHospitalDetails
 }
