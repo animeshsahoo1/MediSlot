@@ -1,4 +1,5 @@
 import { Doctor } from "../models/doctor.model.js";
+import mongoose from "mongoose";
 import { Hospital } from "../models/hospital.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
