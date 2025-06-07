@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAppContext } from '../context/AppContext';
 
 const AuthModal = ({ isOpen, onClose, type, setType }) => {
+  const {fetchUser, navigate}=useAppContext()
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,13 +43,19 @@ const handleSubmit = async (e) => {
       credentials: "include"
     });
 
-    const data = await response.json();
+    const res = await response.json();
+
 
     if (!response.ok) {
-      throw new Error(data.message || (isLogin ? "Login failed" : "Registration failed"));
+      throw new Error(res.message || (isLogin ? "Login failed" : "Registration failed"));
     }
 
-    console.log(isLogin ? "User logged in:" : "User registered:", data);
+    console.log(isLogin ? "User logged in:" : "User registered:", res);
+    // await fetchUser();//TODO: Check if this is working or not
+
+    const roleToNavigate = res.data.user.role;
+    console.log(res.data.user.role)
+    navigate(`/${roleToNavigate}s/complete`)
     onClose(); // Close modal
   } catch (error) {
     console.error(isLogin ? "Login error:" : "Registration error:", error.message);

@@ -10,9 +10,9 @@ router.route("/get-all-hospital").get(getAllHospitals)
 
 //authorized routes
 router.route("/create-hospital").post(verifyJWT,authorizeRole("hospital"), createHospital)
-router.route("/get-hospital").post(verifyJWT,authorizeRole("hospital"), getHospitalDetails)
+router.route("/get-hospital").get(verifyJWT,authorizeRole("hospital"), getHospitalDetails)
 router.route("/update-hospital").patch(verifyJWT,authorizeRole("hospital"), updateHospital)
-router.route("/delete-hospital").get(verifyJWT,authorizeRole("hospital"), deleteHospital)
+router.route("/delete-hospital").delete(verifyJWT,authorizeRole("hospital"), deleteHospital)
 
 router.route("/:hospitalId").get( getHospitalById)
 
