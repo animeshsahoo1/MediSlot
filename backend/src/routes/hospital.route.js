@@ -7,7 +7,6 @@ const router= Router()
 
 
 router.route("/get-all-hospital").get(getAllHospitals)
-router.route("/:hospitalId").get( getHospitalById)
 
 //authorized routes
 router.route("/create-hospital").post(verifyJWT,authorizeRole("hospital"), createHospital)
@@ -15,5 +14,6 @@ router.route("/get-hospital").post(verifyJWT,authorizeRole("hospital"), getHospi
 router.route("/update-hospital").patch(verifyJWT,authorizeRole("hospital"), updateHospital)
 router.route("/delete-hospital").get(verifyJWT,authorizeRole("hospital"), deleteHospital)
 
+router.route("/:hospitalId").get( getHospitalById)
 
 export default router
