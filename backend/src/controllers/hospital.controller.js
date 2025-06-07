@@ -69,7 +69,7 @@ const getHospitalById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid hospital ID!");
     }
 
-    const hospital = await Hospital.findById(hospitalId);
+    const hospital = await Hospital.findById(hospitalId).populate("user", "fullName avatar email");
 
     if (!hospital) {
         throw new ApiError(404, "Hospital not found");
