@@ -168,7 +168,7 @@ const deleteHospital = asyncHandler(async (req, res) => {
 const getAllHospitals = asyncHandler(async (req, res) => {
     const {
         page = 1,
-        limit = 10,
+        limit = 4,
         query = "",
         sortBy = "name",
         sortType = 1
