@@ -4,7 +4,7 @@ import { bookAppointment, deleteAppointment, fetchAppointments, payUsingStripe }
 
 const router=Router()
 
-router.get("/appointments", fetchAppointments); // uses ?doctorId or ?patientId
+router.get("/appointments/fetch", fetchAppointments); // uses ?doctorId or ?patientId
 router.post("/appointments/:doctorId/book", verifyJWT, bookAppointment);
 router.delete("/appointments/:appointmentId", verifyJWT, deleteAppointment);
 router.post("/appointments/:appointmentId/checkout", verifyJWT, payUsingStripe);
