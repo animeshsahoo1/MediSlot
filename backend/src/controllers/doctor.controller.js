@@ -51,7 +51,7 @@ const getDoctorById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid doctor ID!");
   }
 
-  const doctor = await Doctor.findById(doctorId);
+  const doctor = await Doctor.findById(doctorId).populate("user", "fullName avatar email");
 
   if (!doctor) {
     throw new ApiError(404, "doctor not found");
