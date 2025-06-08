@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { bookAppointment, deleteAppointment, payUsingStripe } from "../controllers/appointment.controller.js";
+import { bookAppointment, deleteAppointment, fetchAppointments, payUsingStripe } from "../controllers/appointment.controller.js";
 
 const router=Router()
 
-router.get("/:appointmentId/delete-appointment", verifyJWT, deleteAppointment);
-router.get("/:appointmentId/checkout", verifyJWT, payUsingStripe);
-router.post("/book-appointment/:doctorId", verifyJWT, bookAppointment);
+router.get("/appointments", fetchAppointments); // uses ?doctorId or ?patientId
+router.post("/appointments/:doctorId/book", verifyJWT, bookAppointment);
+router.delete("/appointments/:appointmentId", verifyJWT, deleteAppointment);
+router.post("/appointments/:appointmentId/checkout", verifyJWT, payUsingStripe);
 
 
 

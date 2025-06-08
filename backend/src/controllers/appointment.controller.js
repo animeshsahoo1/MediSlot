@@ -176,10 +176,52 @@ const payUsingStripe = asyncHandler(async (req, res) => {
   res.status(200).json({ url: session.url });
 });
 
+const fetchAppointments = asyncHandler(async (req, res) => {
+  const { doctorId, patientId } = req.query;
+
+  if (!doctorId && !patientId) {
+    throw new ApiError(400, "doctorId or patientId is required");
+  }
+
+  if (doctorId && !isValidObjectId(doctorId)) {
+    throw new ApiError(400, "Invalid doctor ID");
+  }
+
+  if (patientId && !isValidObjectId(patientId)) {
+    throw new ApiError(400, "Invalid patient ID");
+  }
+
+  const filter = doctorId ? { doctor: doctorId } : { patient: patientId };
+  //nested populating
+  const appointments = await Appointment.find(filter)
+    .populate({
+      path: 'doctor',
+      populate: {
+        path: 'user',
+        select: 'fullName avatar'
+      },
+      select: '-__v'
+    })
+    .populate({
+      path: 'patient',
+      populate: {
+        path: 'user',
+        select: 'fullName avatar'
+      },
+      select: '-__v'
+    })
+    .sort({ date: -1 }); // latest first
+
+  res.status(200).json(new ApiResponse(200, appointments, "Appointments fetched successfully"));
+});
+
+
+
 
 
 export{
     bookAppointment,
     deleteAppointment,
-    payUsingStripe
+    payUsingStripe,
+    fetchAppointments
 }

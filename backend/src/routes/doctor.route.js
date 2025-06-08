@@ -11,7 +11,7 @@ router.route("/create-doctor").post(verifyJWT, authorizeRole("doctor"), createDo
 router.route("/delete-doctor").get(verifyJWT, authorizeRole("doctor"), deleteDoctor)
 router.route("/set-unavailable").post(verifyJWT, authorizeRole("doctor"), setUnavailableStatus)
 router.route("/set-schedule").post(verifyJWT, authorizeRole("doctor"), setSchedule)
-router.route("/update-schedule").post(verifyJWT, authorizeRole("doctor"), updateSchedulePart)
+// router.route("/update-schedule").post(verifyJWT, authorizeRole("doctor"), updateSchedulePart)
 router.route("/update-doctor").patch(verifyJWT, authorizeRole("doctor"), updateDoctor)
 router.route("/get-appointments-for-doctor").get(verifyJWT, authorizeRole("doctor"), getAppointmentsForDoctor)
 router.route("/get-doctor-details").get(verifyJWT, authorizeRole("doctor"), getDoctorDetails)
