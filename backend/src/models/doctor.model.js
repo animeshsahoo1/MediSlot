@@ -1,7 +1,7 @@
 import mongoose,{Schema} from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const doctorSchema=Schema({
+const doctorSchema= new Schema({
     //TODO: ADD A SCHEDULE FIELD AS WELL LATER
     user: {
     type: mongoose.Schema.Types.ObjectId,

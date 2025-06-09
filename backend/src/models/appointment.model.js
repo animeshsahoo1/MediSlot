@@ -1,7 +1,7 @@
 import mongoose,{Schema} from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
-const appointmentSchema=Schema({
+const appointmentSchema=new Schema({
     patient: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Patient",
