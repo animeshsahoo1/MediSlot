@@ -69,7 +69,6 @@ const getAppointmentsForPatient = asyncHandler(async (req, res) => {
 
   const appointments = await Appointment.find(query)
     .populate("doctor", "specialization experience")
-    .populate("hospital", "name")
     .sort({ createdAt: -1 });
 
   res.status(200).json(new ApiResponse(200, appointments, "Appointments fetched successfully"));

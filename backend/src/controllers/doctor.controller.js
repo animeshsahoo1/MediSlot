@@ -266,7 +266,6 @@ const getAppointmentsForDoctor = asyncHandler(async (req, res) => {
   const appointments = await Appointment.find(query)
     .populate("patient", "fullName gender") //without populate u will only get patientId not its name or email
     .populate("doctor", "specialization")
-    .populate("hospital", "name")
     .sort({ createdAt: -1 }); //latest first
 
   res
