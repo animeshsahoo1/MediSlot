@@ -30,28 +30,80 @@ const bookAppointment = asyncHandler(async (req, res) => {
   const patientId = patient._id;
   const session = await mongoose.startSession();
   session.startTransaction();
-
+  
   try {
-    // Check if doctor exists
     const doctor = await Doctor.findById(doctorId, null, { session });
     if (!doctor) throw new ApiError(404, "Doctor not found");
 
+    const start = new Date(startTime);// convert isostring into :Tue Jun 10 2025 09:30:00 GMT+0530 (India Standard Time)->js date obj
+    const end = new Date(endTime);
+
+    const dayOfWeek = start.toLocaleString("en-US", { weekday: "long" }); // "Monday", "Tuesday", ...
+
+    // Get schedule for the specific day
+    const daySchedule = doctor.schedule.find((s) => s.day === dayOfWeek);
+    if (!daySchedule) {
+      throw new ApiError(400, `Doctor is not available on ${dayOfWeek}`);
+    }
+
+    // Helper to convert "HH:mm" to Date using the original `startTime` date
+    const toTimeOnDate = (dateObj, timeStr) => {
+      const [hours, minutes] = timeStr.split(":").map(Number);//convert all element to number using .map(Number)
+      const newDate = new Date(dateObj);
+      newDate.setHours(hours, minutes, 0, 0);//sets the time portion of the date obj
+      return newDate;
+    };
+
+    // Compute working hours for that day
+    const scheduleStart = toTimeOnDate(start, daySchedule.startTime);
+    const scheduleEnd = toTimeOnDate(start, daySchedule.endTime);
+
+    // Check if appointment is within schedule time
+    if (start < scheduleStart || end > scheduleEnd) {
+      throw new ApiError(
+        400,
+        `Appointment time is outside of doctor's schedule on ${dayOfWeek}`
+      );
+    }
+
+    // Check for overlap with any breaks
+    for (const br of daySchedule.breaks) {
+      const breakStart = toTimeOnDate(start, br.breakStart);
+      const breakEnd = toTimeOnDate(start, br.breakEnd);
+      const overlapsBreak =
+        (start < breakEnd && start >= breakStart) || // starts during break
+        (end > breakStart && end <= breakEnd) || // ends during break
+        (start <= breakStart && end >= breakEnd); // fully covers a break
+      if (overlapsBreak) {
+        throw new ApiError(
+          400,
+          `Appointment time overlaps with a break from ${br.breakStart} to ${br.breakEnd}`
+        );
+      }
+    }
+
     // Check for overlapping appointment
-    const overlappingAppointment = await Appointment.findOne({
-      doctor: doctorId,
-      $or: [
-        {
-          startTime: { $lt: new Date(endTime), $gte: new Date(startTime) }
-        },
-        {
-          endTime: { $gt: new Date(startTime), $lte: new Date(endTime) }
-        },
-        {
-          startTime: { $lte: new Date(startTime) },
-          endTime: { $gte: new Date(endTime) }
-        }
-      ]
-    }, null, { session });
+    const overlappingAppointment = await Appointment.findOne(
+      {
+        doctor: doctorId,
+        status: { $in: ["pending", "booked"] }, // Only consider pending or booked
+        $or: [
+          {
+            startTime: { $lt: new Date(endTime), $gte: new Date(startTime) },
+          },
+          {
+            endTime: { $gt: new Date(startTime), $lte: new Date(endTime) },
+          },
+          {
+            startTime: { $lte: new Date(startTime) },
+            endTime: { $gte: new Date(endTime) },
+          },
+        ],
+      },
+      null,
+      { session }
+    );
+
     /*
     Model.findOne(filter, projection, options)
     projection: fields to include or exclude, since we dont need that we pass null to move to options
@@ -64,36 +116,38 @@ const bookAppointment = asyncHandler(async (req, res) => {
     if (overlappingAppointment) {
       throw new ApiError(409, "Doctor already booked for this time slot");
     }
-    const start = new Date(startTime);
-    const end = new Date(endTime);
     const durationInHours = (end - start) / (1000 * 60 * 60);
 
     if (durationInHours <= 0) {
       throw new ApiError(400, "End time must be after start time");
     }
 
-    const fee = durationInHours * doctor.hourlyRate;
+    const fee = Math.ceil(durationInHours * doctor.hourlyRate);
 
-    // Since create can accept either a single document or an array, it normally returns a single doc or an array. But during transactions 
+    // Since create can accept either a single document or an array, it normally returns a single doc or an array. But during transactions
     // (with session), it only works with the array syntax, even for a single document. so destructure it using []
     const [appointment] = await Appointment.create(
-      [{
-        doctor: doctorId,
-        patient: patientId,
-        startTime,
-        endTime,
-        status: "booked",
-        fee
-      }],
+      [
+        {
+          doctor: doctorId,
+          patient: patientId,
+          startTime,
+          endTime,
+          status: "booked",
+          fee,
+        },
+      ],
       { session }
     );
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(201).json(
-      new ApiResponse(201, appointment, "Appointment booked successfully")
-    );
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(201, appointment, "Appointment booked successfully")
+      );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
@@ -113,8 +167,8 @@ const deleteAppointment = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Appointment not found");
   }
 
-  const patient = await Patient.findById(appointment.patient);//if no patient find returns null
-  const doctor = await Doctor.findById(appointment.doctor);//if no doctor find returns null
+  const patient = await Patient.findById(appointment.patient); //if no patient find returns null
+  const doctor = await Doctor.findById(appointment.doctor); //if no doctor find returns null
 
   const userId = req.user._id.toString();
 
@@ -122,14 +176,16 @@ const deleteAppointment = asyncHandler(async (req, res) => {
   const isDoctor = doctor.user.toString() === userId;
 
   if (!isPatient && !isDoctor) {
-  throw new ApiError(403, "Unauthorized to delete this appointment");
+    throw new ApiError(403, "Unauthorized to delete this appointment");
   }
 
-  const deletedAppointment=await Appointment.findByIdAndDelete(appointmentId);//return deletedDocument if found null if not delted
-  if(!deletedAppointment){
-    throw new ApiError(500, "Unable to delete the appointment")
+  const deletedAppointment = await Appointment.findByIdAndDelete(appointmentId); //return deletedDocument if found null if not delted
+  if (!deletedAppointment) {
+    throw new ApiError(500, "Unable to delete the appointment");
   }
-  res.status(200).json(new ApiResponse(200, null, "Appointment cancelled successfully"));
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Appointment cancelled successfully"));
 });
 
 const payUsingStripe = asyncHandler(async (req, res) => {
@@ -144,8 +200,8 @@ const payUsingStripe = asyncHandler(async (req, res) => {
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
-    success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,//if payement success redirect user to this url
-    cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,//if payement failed redirect user to this url
+    success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`, //if payement success redirect user to this url
+    cancel_url: `${process.env.CLIENT_URL}/payment-cancel`, //if payement failed redirect user to this url
     line_items: [
       {
         price_data: {
@@ -186,24 +242,28 @@ const fetchAppointments = asyncHandler(async (req, res) => {
   //nested populating
   const appointments = await Appointment.find(filter)
     .populate({
-      path: 'doctor',
+      path: "doctor",
       populate: {
-        path: 'user',
-        select: 'fullName avatar'
+        path: "user",
+        select: "fullName avatar",
       },
-      select: '-__v'
+      select: "-__v",
     })
     .populate({
-      path: 'patient',
+      path: "patient",
       populate: {
-        path: 'user',
-        select: 'fullName avatar'
+        path: "user",
+        select: "fullName avatar",
       },
-      select: '-__v'
+      select: "-__v",
     })
     .sort({ date: -1 }); // latest first
 
-  res.status(200).json(new ApiResponse(200, appointments, "Appointments fetched successfully"));
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, appointments, "Appointments fetched successfully")
+    );
 });
 
 const updateAppointmentStatus = asyncHandler(async (req, res) => {
@@ -220,20 +280,20 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
   // Find appointment with both patient and doctor populated
   const appointment = await Appointment.findById(appointmentId)
     .populate({
-      path: 'patient',
+      path: "patient",
       populate: {
-        path: 'user',
-        select: 'fullName avatar'
+        path: "user",
+        select: "fullName avatar",
       },
-      select: '-__v'
+      select: "-__v",
     })
     .populate({
-      path: 'doctor',
+      path: "doctor",
       populate: {
-        path: 'user',
-        select: 'fullName avatar email'
+        path: "user",
+        select: "fullName avatar email",
       },
-      select: '-__v'
+      select: "-__v",
     });
 
   if (!appointment) {
@@ -242,6 +302,7 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
 
   const patient = appointment.patient;
 
+  //TODO: this block is throwing some error check it later
   // if (status.toLowerCase() === 'cancelled') {
   //   await sendMail(patient.user.email,"Appointment Cancelled","<h1>Your appoinment has been cancelled</h1>")
   // }
@@ -250,20 +311,21 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
   appointment.status = status;
   await appointment.save();
 
-  res.status(200).json(
-    new ApiResponse(200, appointment, "Appointment status updated successfully")
-  );
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        appointment,
+        "Appointment status updated successfully"
+      )
+    );
 });
 
-
-
-
-
-
-export{
+export {
   bookAppointment,
   deleteAppointment,
   payUsingStripe,
   fetchAppointments,
-  updateAppointmentStatus
-}
+  updateAppointmentStatus,
+};
