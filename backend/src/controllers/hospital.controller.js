@@ -210,7 +210,7 @@ const getHospitalDetails = asyncHandler(async (req, res) => {
         throw new ApiError(404, "Doctor profile not found");
     }
 
-    res.status(200).json(new ApiResponse(200, hospital, "Doctor profile fetched successfully"));
+    res.status(200).json(new ApiResponse(200, hospital, "Hospital profile fetched successfully"));
 });
 
 

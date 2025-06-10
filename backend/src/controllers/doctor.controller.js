@@ -160,6 +160,7 @@ const getAllDoctors = asyncHandler(async (req, res) => {
     sortBy = "user.fullName",
     sortType = 1,
     hospitalId,
+    verified
   } = req.query;
 
   const sortQuery = { [sortBy]: Number(sortType) };
@@ -170,6 +171,11 @@ const getAllDoctors = asyncHandler(async (req, res) => {
       { specialization: { $regex: query, $options: "i" } },
     ],
   };
+
+  // Convert and add verified filter as the query comes in string but we need to check boolean
+  if (verified === "true" || verified === "false") {
+    matchStage.verified = verified === "true";
+  }
 
   if (hospitalId && isValidObjectId(hospitalId)) {
     matchStage.hospital = new mongoose.Types.ObjectId(hospitalId);
