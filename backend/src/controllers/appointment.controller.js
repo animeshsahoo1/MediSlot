@@ -113,21 +113,16 @@ const deleteAppointment = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Appointment not found");
   }
 
-    const patient = await Patient.findById(appointment.patient);//if no patient find returns null
-    const doctor = await Doctor.findById(appointment.doctor);//if no doctor find returns null
+  const patient = await Patient.findById(appointment.patient);//if no patient find returns null
+  const doctor = await Doctor.findById(appointment.doctor);//if no doctor find returns null
 
-    const userId = req.user._id.toString();
+  const userId = req.user._id.toString();
 
-    const isPatient = patient.user.toString() === userId;
-    const isDoctor = doctor.user.toString() === userId;
+  const isPatient = patient.user.toString() === userId;
+  const isDoctor = doctor.user.toString() === userId;
 
-    if (!isPatient && !isDoctor) {
-    throw new ApiError(403, "Unauthorized to delete this appointment");
-    }
-
-  let message=`Your appointment with id: ${appointment._id} has been cancelled`
-  if(appointment.status=="booked"){
-    message=`Your appointment with id: ${appointment._id} has been cancelled, your amount will be refunded within 7 days`
+  if (!isPatient && !isDoctor) {
+  throw new ApiError(403, "Unauthorized to delete this appointment");
   }
 
   const deletedAppointment=await Appointment.findByIdAndDelete(appointmentId);//return deletedDocument if found null if not delted
@@ -215,13 +210,68 @@ const fetchAppointments = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, appointments, "Appointments fetched successfully"));
 });
 
+const updateAppointmentStatus = asyncHandler(async (req, res) => {
+  const { appointmentId, status } = req.body;
+
+  if (!appointmentId || !status) {
+    throw new ApiError(400, "appointmentId and status are required");
+  }
+
+  if (!isValidObjectId(appointmentId)) {
+    throw new ApiError(400, "Invalid appointment ID");
+  }
+
+  // Find appointment with both patient and doctor populated
+  const appointment = await Appointment.findById(appointmentId)
+    .populate({
+      path: 'patient',
+      populate: {
+        path: 'user',
+        select: 'fullName avatar'
+      },
+      select: '-__v'
+    })
+    .populate({
+      path: 'doctor',
+      populate: {
+        path: 'user',
+        select: 'fullName avatar'
+      },
+      select: '-__v'
+    });
+
+  if (!appointment) {
+    throw new ApiError(404, "Appointment not found");
+  }
+
+  const patient = appointment.patient;
+  const message = `Your appointment with Dr. ${appointment.doctor.user.fullName} on ${appointment.date.toDateString()} has been cancelled`;
+
+  if (status.toLowerCase() === 'cancelled') {
+    const notification = await sendNotification(patient, message, appointment._id);
+    if (!notification) {
+      throw new ApiError(500, "Unable to send notification");
+    }
+  }
+
+  // Update appointment status
+  appointment.status = status;
+  await appointment.save();
+
+  res.status(200).json(
+    new ApiResponse(200, appointment, "Appointment status updated successfully")
+  );
+});
+
+
 
 
 
 
 export{
-    bookAppointment,
-    deleteAppointment,
-    payUsingStripe,
-    fetchAppointments
+  bookAppointment,
+  deleteAppointment,
+  payUsingStripe,
+  fetchAppointments,
+  updateAppointmentStatus
 }
