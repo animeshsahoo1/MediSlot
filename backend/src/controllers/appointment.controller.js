@@ -129,10 +129,6 @@ const deleteAppointment = asyncHandler(async (req, res) => {
   if(!deletedAppointment){
     throw new ApiError(500, "Unable to delete the appointment")
   }
-  const notification=sendNotification(patient,message,appointmentId)//cant pas appointment._id as its deleted
-  if(!notification){
-    throw new ApiError(500, "unable to send notification")
-  }
   res.status(200).json(new ApiResponse(200, null, "Appointment cancelled successfully"));
 });
 
@@ -235,7 +231,7 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
       path: 'doctor',
       populate: {
         path: 'user',
-        select: 'fullName avatar'
+        select: 'fullName avatar email'
       },
       select: '-__v'
     });
@@ -245,13 +241,9 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
   }
 
   const patient = appointment.patient;
-  const message = `Your appointment with Dr. ${appointment.doctor.user.fullName} on ${appointment.date.toDateString()} has been cancelled`;
 
   if (status.toLowerCase() === 'cancelled') {
-    const notification = await sendNotification(patient, message, appointment._id);
-    if (!notification) {
-      throw new ApiError(500, "Unable to send notification");
-    }
+    await sendMail(patient.user.email,"Appointment Cancelled","<h1>Your appoinment has been cancelled</h1>")
   }
 
   // Update appointment status
