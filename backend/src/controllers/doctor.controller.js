@@ -320,10 +320,10 @@ const updateSchedulePart = asyncHandler(async (req, res) => {
 });
 
 const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
-  const { doctorId, verified } = req.body;
+  const { doctorId } = req.body;
 
-  if (!doctorId || typeof verified !== "boolean") {
-    throw new ApiError(400, "doctorId and verified (boolean) are required");
+  if (!doctorId ) {
+    throw new ApiError(400, "doctorId is required");
   }
 
   if (!isValidObjectId(doctorId)) {
@@ -335,8 +335,8 @@ const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Doctor not found");
   }
 
-  doctor.verified = verified;
-  await doctor.save();
+  doctor.verified = !doctor.verified;
+  await doctor.save({validateBeforeSave: false});
 
   return res
     .status(200)
@@ -344,7 +344,7 @@ const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         doctor,
-        `Doctor verification status updated to ${verified}`
+        `Doctor verification status updated to ${!doctor.verified}`
       )
     );
 });

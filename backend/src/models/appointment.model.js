@@ -27,7 +27,7 @@ const appointmentSchema=new Schema({
     status: {
         type: String,
         enum: ["booked", "completed", "cancelled", "pending"],//pending for uncomplete payment
-        default: "booked",
+        default: "pending",
     }
 },{timestamps:true})
 
