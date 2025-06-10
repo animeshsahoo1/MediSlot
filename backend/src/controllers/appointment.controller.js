@@ -35,14 +35,12 @@ const bookAppointment = asyncHandler(async (req, res) => {
     const doctor = await Doctor.findById(doctorId, null, { session });
     if (!doctor) throw new ApiError(404, "Doctor not found");
 
-    const start = new Date(startTime); // convert isostring into :Tue Jun 10 2025 09:30:00 GMT+0530 (India Standard Time)->js date obj
+    const start = new Date(startTime);
     const end = new Date(endTime);
 
-    const dayOfWeek = start.toLocaleString("en-US", {
-      weekday: "long",
-      timeZone: "Asia/Kolkata",
-    }); // "Monday", "Tuesday", ...
-
+    console.log(start, end);
+    const dayOfWeek = start.toLocaleString("en-US", { weekday: "long" }); // "Monday", "Tuesday", ...
+    console.log(dayOfWeek);
     // Get schedule for the specific day
     const daySchedule = doctor.schedule.find(
       (s) => s.day.toLowerCase() === dayOfWeek.toLowerCase()
@@ -54,15 +52,17 @@ const bookAppointment = asyncHandler(async (req, res) => {
 
     // Helper to convert "HH:mm" to Date using the original `startTime` date
     const toTimeOnDate = (dateObj, timeStr) => {
-      const [hours, minutes] = timeStr.split(":").map(Number); //convert all element to number using .map(Number)
+      const [hours, minutes] = timeStr.split(":").map(Number);
       const newDate = new Date(dateObj);
-      newDate.setHours(hours, minutes, 0, 0); //sets the time portion of the date obj
+      newDate.setUTCHours(hours, minutes, 0, 0); // ✅ force time as UTC hours
       return newDate;
     };
 
     // Compute working hours for that day
+    console.log(daySchedule.startTime, daySchedule.endTime);
     const scheduleStart = toTimeOnDate(start, daySchedule.startTime);
     const scheduleEnd = toTimeOnDate(start, daySchedule.endTime);
+    console.log("scheduleStart: ", scheduleStart, "scheduleEnd: ", scheduleEnd);
 
     // Check if appointment is within schedule time
     if (start < scheduleStart || end > scheduleEnd) {
