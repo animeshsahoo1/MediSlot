@@ -242,9 +242,9 @@ const updateAppointmentStatus = asyncHandler(async (req, res) => {
 
   const patient = appointment.patient;
 
-  if (status.toLowerCase() === 'cancelled') {
-    await sendMail(patient.user.email,"Appointment Cancelled","<h1>Your appoinment has been cancelled</h1>")
-  }
+  // if (status.toLowerCase() === 'cancelled') {
+  //   await sendMail(patient.user.email,"Appointment Cancelled","<h1>Your appoinment has been cancelled</h1>")
+  // }
 
   // Update appointment status
   appointment.status = status;
