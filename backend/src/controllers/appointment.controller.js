@@ -12,7 +12,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
   const { doctorId } = req.params;
   const userId = req.user._id;
   const { startTime, endTime } = req.body;
-  console.log(startTime,endTime)
+  console.log(startTime, endTime);
 
   if (!isValidObjectId(doctorId)) {
     throw new ApiError(400, "Invalid doctorId");
@@ -36,12 +36,12 @@ const bookAppointment = asyncHandler(async (req, res) => {
     const doctor = await Doctor.findById(doctorId, null, { session });
     if (!doctor) throw new ApiError(404, "Doctor not found");
 
-    const start = new Date(startTime); 
+    const start = new Date(startTime);
     const end = new Date(endTime);
 
-    console.log(start,end);
+    console.log(start, end);
     const dayOfWeek = start.toLocaleString("en-US", { weekday: "long" }); // "Monday", "Tuesday", ...
-    console.log(dayOfWeek)
+    console.log(dayOfWeek);
     // Get schedule for the specific day
     const daySchedule = doctor.schedule.find(
       (s) => s.day.toLowerCase() === dayOfWeek.toLowerCase()
@@ -53,17 +53,28 @@ const bookAppointment = asyncHandler(async (req, res) => {
 
     // Helper to convert "HH:mm" to Date using the original `startTime` date
     const toTimeOnDate = (dateObj, timeStr) => {
-      const [hours, minutes] = timeStr.split(":").map(Number); //convert all element to number using .map(Number)
-      const newDate = new Date(dateObj);
-      newDate.setHours(hours, minutes, 0, 0); //sets the time portion of the date obj
-      return newDate;
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      const utcDate = new Date(dateObj);
+
+      // Create a UTC time that matches the IST time
+      const istDate = new Date(
+        Date.UTC(
+          utcDate.getUTCFullYear(),
+          utcDate.getUTCMonth(),
+          utcDate.getUTCDate(),
+          hours - 5, // 5 hours behind
+          minutes - 30 // minus 30 mins for IST offset
+        )
+      );
+
+      return istDate;
     };
 
     // Compute working hours for that day
-    console.log(daySchedule.startTime, daySchedule.endTime)
+    console.log(daySchedule.startTime, daySchedule.endTime);
     const scheduleStart = toTimeOnDate(start, daySchedule.startTime);
     const scheduleEnd = toTimeOnDate(start, daySchedule.endTime);
-    console.log("scheduleStart: ",scheduleStart,"scheduleEnd: ",scheduleEnd)
+    console.log("scheduleStart: ", scheduleStart, "scheduleEnd: ", scheduleEnd);
 
     // Check if appointment is within schedule time
     if (start < scheduleStart || end > scheduleEnd) {
