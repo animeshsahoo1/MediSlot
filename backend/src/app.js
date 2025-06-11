@@ -1,6 +1,7 @@
 import express from "express"
 import cors from "cors"
 import cookieParser from "cookie-parser"
+import stripeRoute from "./routes/stripe.route.js"
 
 const app=express()
 
@@ -11,6 +12,9 @@ app.use(cors({
     credentials: true
 }))
 
+// Stripe webhook requires raw body, so this must come before express.json()
+app.use('/api/v1/stripe', stripeRoute);
+// basically it must come before app.use(express.json({limit: "64kb"}))
 
 app.use(express.json({limit: "64kb"}))//Parses requests with JSON payloads(convertible to json) and makes the data available under req.body.
 app.use(express.urlencoded({extended: true, limit: "32kb"}))//Parses incoming requests with URL-encoded payloads and makes the data available under req.body.

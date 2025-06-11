@@ -7,6 +7,7 @@ import { Appointment } from "../models/appointment.model.js";
 import { Doctor } from "../models/doctor.model.js";
 import stripe from "../utils/stripe.js";
 import { sendNotification } from "../utils/sendNotification.js";
+import { getINRtoUSDConversionRate } from "../utils/currencyConverter.js";
 
 const bookAppointment = asyncHandler(async (req, res) => {
   const { doctorId } = req.params;
@@ -231,14 +232,18 @@ const deleteAppointment = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, null, "Appointment cancelled successfully"));
 });
 
+//!YOU HAVE TO USE -> stripe listen --forward-to localhost:8000/api/v1/stripe/webhook WHENEVER YOU ARE TESTING STRIPE IN LOCALHOST
+//!MAKE SURE YOU USE IT IN WINDOWS COMMAND PROMPT NOT VS CODE TERMINAL
 const payUsingStripe = asyncHandler(async (req, res) => {
   const { appointmentId } = req.params;
-
   // Optional: Fetch appointment info from DB (e.g., amount, doctor, patient)
   const appointment = await Appointment.findById(appointmentId);
   if (!appointment) {
     throw new ApiError(404, "Appointment not found");
   }
+
+  const inrToUsd = await getINRtoUSDConversionRate();
+  const usdAmount = Math.ceil(appointment.fee * inrToUsd); 
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -252,7 +257,7 @@ const payUsingStripe = asyncHandler(async (req, res) => {
           product_data: {
             name: `Appointment with ${appointment.doctor}`,
           },
-          unit_amount: appointment.fee * 100, // amount in cents
+          unit_amount: usdAmount* 100, // amount in cents
         },
         quantity: 1,
       },
@@ -268,7 +273,7 @@ const payUsingStripe = asyncHandler(async (req, res) => {
 
 const fetchAppointments = asyncHandler(async (req, res) => {
   const { doctorId, patientId } = req.query;
-
+  
   if (!doctorId && !patientId) {
     throw new ApiError(400, "doctorId or patientId is required");
   }
