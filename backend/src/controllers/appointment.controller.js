@@ -113,7 +113,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
     for (const br of daySchedule.breaks) {
       const breakStart = toTimeOnDate(start, br.breakStart);
       const breakEnd = toTimeOnDate(start, br.breakEnd);
-      console.log("break start :",breakStart, "break end:",breakEnd)
+      console.log("break start :", breakStart, "break end:", breakEnd);
       const overlapsBreak =
         (start < breakEnd && start >= breakStart) || // starts during break
         (end > breakStart && end <= breakEnd) || // ends during break
@@ -243,11 +243,14 @@ const payUsingStripe = asyncHandler(async (req, res) => {
   }
 
   const inrToUsd = await getINRtoUSDConversionRate();
-  const usdAmount = Math.ceil(appointment.fee * inrToUsd); 
+  const usdAmount = Math.ceil(appointment.fee * inrToUsd);
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
+    invoice_creation: {
+      enabled: true,
+    },
     success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`, //if payement success redirect user to this url
     cancel_url: `${process.env.CLIENT_URL}/payment-cancel`, //if payement failed redirect user to this url
     line_items: [
@@ -257,7 +260,7 @@ const payUsingStripe = asyncHandler(async (req, res) => {
           product_data: {
             name: `Appointment with ${appointment.doctor}`,
           },
-          unit_amount: usdAmount* 100, // amount in cents
+          unit_amount: usdAmount * 100, // amount in cents
         },
         quantity: 1,
       },
@@ -273,7 +276,7 @@ const payUsingStripe = asyncHandler(async (req, res) => {
 
 const fetchAppointments = asyncHandler(async (req, res) => {
   const { doctorId, patientId } = req.query;
-  
+
   if (!doctorId && !patientId) {
     throw new ApiError(400, "doctorId or patientId is required");
   }
