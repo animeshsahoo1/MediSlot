@@ -112,6 +112,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
     for (const br of daySchedule.breaks) {
       const breakStart = toTimeOnDate(start, br.breakStart);
       const breakEnd = toTimeOnDate(start, br.breakEnd);
+      console.log("break start :",breakStart, "break end:",breakEnd)
       const overlapsBreak =
         (start < breakEnd && start >= breakStart) || // starts during break
         (end > breakStart && end <= breakEnd) || // ends during break
@@ -175,7 +176,7 @@ const bookAppointment = asyncHandler(async (req, res) => {
           patient: patientId,
           startTime,
           endTime,
-          status: "booked",
+          status: "pending",
           fee,
         },
       ],
