@@ -51,6 +51,30 @@ const bookAppointment = asyncHandler(async (req, res) => {
       throw new ApiError(400, `Doctor is not available on ${dayOfWeek}`);
     }
 
+    /*
+    ?THERE WAS A MAJOR ISSUE WHILE SENDING REQUEST THROUGH POSTMAN ON LOCALHOST AND FROM FRONTEND TO RENDER
+    ?WHAT HAPPEND WAS THAT RENDER AND LOCALHOST USED DIFFRENT TIME ZONES WHICH GAVE WRONG RESULTS SO WE CONVERTED EVERYTHING
+    ?INTO UTC TIME AS FRONTEND WAS SENDING TIME IN ISO FORMAT UTC
+    !Always convert and compare dates in the same time zone — preferably UTC 
+    *the error occured becuase we were using setHours() which sets the time in the system’s local time zone, not in UTC.
+    *Heres a list of all method which uses localTime most of these have a UTC version as well
+
+    | Method                                                               | Description                                                            |
+    ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+    `new Date()`                                                         | If passed a date string without a time zone, it assumes **local time** |
+    `setHours(hours, minutes, seconds, ms)`                              | Sets the time in **local time zone**                                   |
+    `setFullYear(year, month, day)`                                      | Sets the date in **local time zone**                                   |
+    `setMonth(month)`                                                    | Sets the month (local)                                                 |
+    `setDate(day)`                                                       | Sets the day of the month (local)                                      |
+    `setMinutes(minutes)` / `setSeconds()` / `setMilliseconds()`         | Set time components in **local time**                                  |
+    `getHours()` / `getMinutes()` / `getSeconds()`                       | Returns values in **local time**                                       |
+    `getFullYear()` / `getMonth()` / `getDate()`                         | Get date components in **local time**                                  |
+    `toLocaleString()` / `toLocaleDateString()` / `toLocaleTimeString()` | Returns strings in **local time**                                      |
+    `toString()`                                                         | Returns the date string in **local time** format                       |
+    `Date.parse()`                                                       | If string lacks a time zone, it assumes **local time**                 |
+
+    */
+
     // Helper to convert "HH:mm" to Date using the original `startTime` date
     const toTimeOnDate = (dateObj, timeStr) => {
       const [hours, minutes] = timeStr.split(":").map(Number);

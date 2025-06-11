@@ -143,17 +143,24 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Latitude and longitude are required");
   }
 
+  const latNum = parseFloat(lat);
+  const lonNum = parseFloat(lon);
+
+  if (isNaN(latNum) || isNaN(lonNum)) {
+    throw new ApiError(400, "Invalid latitude or longitude format");
+  }
+
   const hospitals = await Hospital.find({
     location: {
       $near: {
         $geometry: {
           type: "Point",
-          coordinates: [parseFloat(lon), parseFloat(lat)],
+          coordinates: [lonNum, latNum],
         },
         $maxDistance: parseFloat(maxDistance), // optional: filter by radius
       },
     },
-  });
+  }).populate("user", "avatar email");
 
   return res
     .status(200)
