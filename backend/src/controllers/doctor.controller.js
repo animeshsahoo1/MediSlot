@@ -51,7 +51,10 @@ const getDoctorById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid doctor ID!");
   }
 
-  const doctor = await Doctor.findById(doctorId).populate("user", "fullName avatar email");
+  const doctor = await Doctor.findById(doctorId).populate(
+    "user",
+    "fullName avatar email"
+  );
 
   if (!doctor) {
     throw new ApiError(404, "doctor not found");
@@ -87,6 +90,11 @@ const deleteDoctor = asyncHandler(async (req, res) => {
 const setUnavailableStatus = asyncHandler(async (req, res) => {
   const { startDate, endDate } = req.body;
   const userId = req.user._id;
+
+  if (!startDate || !endDate) {
+    throw new ApiError(400, "Both startDate and endDate are required");
+  }
+
   const doctor = await Doctor.findOne({ user: userId }).populate(
     "user",
     "-password -refreshToken"
@@ -95,8 +103,25 @@ const setUnavailableStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Doctor profile not found");
   }
 
-  if (!startDate || !endDate) {
-    throw new ApiError(400, "Both startDate and endDate are required");
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  // Check for conflicting (booked or pending) appointments
+  const conflictingAppointments = await Appointment.find({
+    doctor: doctor._id,
+    status: { $in: ["booked", "pending"] },
+    $or: [
+      { startTime: { $lt: end, $gte: start } },
+      { endTime: { $gt: start, $lte: end } },
+      { startTime: { $lte: start }, endTime: { $gte: end } },
+    ],
+  });
+
+  if (conflictingAppointments.length > 0) {
+    throw new ApiError(
+      400,
+      "Some booked or pending appointments exist during this period. Please cancel them manually before setting unavailable status."
+    );
   }
 
   const updatedDoc = await Doctor.findByIdAndUpdate(
@@ -105,8 +130,8 @@ const setUnavailableStatus = asyncHandler(async (req, res) => {
       $push: {
         unavailableStatus: {
           status: true,
-          startDate: new Date(startDate),
-          endDate: new Date(endDate),
+          startDate: start,
+          endDate: end,
         },
       },
     },
@@ -160,7 +185,7 @@ const getAllDoctors = asyncHandler(async (req, res) => {
     sortBy = "user.fullName",
     sortType = 1,
     hospitalId,
-    verified
+    verified,
   } = req.query;
 
   const sortQuery = { [sortBy]: Number(sortType) };
@@ -271,20 +296,20 @@ const getAppointmentsForDoctor = asyncHandler(async (req, res) => {
 
   const appointments = await Appointment.find(query)
     .populate({
-      path: 'doctor',
+      path: "doctor",
       populate: {
-        path: 'user',
-        select: 'fullName avatar'
+        path: "user",
+        select: "fullName avatar",
       },
-      select: '-__v'
+      select: "-__v",
     })
     .populate({
-      path: 'patient',
+      path: "patient",
       populate: {
-        path: 'user',
-        select: 'fullName avatar gender'
+        path: "user",
+        select: "fullName avatar gender",
       },
-      select: '-__v'
+      select: "-__v",
     })
     .sort({ createdAt: -1 }); //latest first
 
@@ -342,7 +367,7 @@ const updateSchedulePart = asyncHandler(async (req, res) => {
 const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
   const { doctorId } = req.body;
 
-  if (!doctorId ) {
+  if (!doctorId) {
     throw new ApiError(400, "doctorId is required");
   }
 
@@ -356,7 +381,7 @@ const updateDoctorVerificationStatus = asyncHandler(async (req, res) => {
   }
 
   doctor.verified = !doctor.verified;
-  await doctor.save({validateBeforeSave: false});
+  await doctor.save({ validateBeforeSave: false });
 
   return res
     .status(200)
