@@ -160,7 +160,7 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
         $maxDistance: parseFloat(maxDistance), // optional: filter by radius
       },
     },
-  }).populate("user", "avatar email");
+  }).limit(5).populate("user", "avatar email");
 
   return res
     .status(200)

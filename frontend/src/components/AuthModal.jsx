@@ -13,7 +13,7 @@ const AuthModal = ({ isOpen, onClose, type, setType }) => {
   const [userName, setUserName] = useState('');
   const [role, setRole] = useState("");
   const [isLogin, setIsLogin] = useState(true);
-
+ 
   if (!isOpen) return null;
 
 const handleSubmit = async (e) => {
@@ -51,7 +51,7 @@ const handleSubmit = async (e) => {
     }
 
     console.log(isLogin ? "User logged in:" : "User registered:", res);
-    // await fetchUser();//TODO: Check if this is working or not
+    await fetchUser();//TODO: Check if this is working or not
 
     const roleToNavigate = res.data.user.role;
     console.log(res.data.user.role)
@@ -214,7 +214,7 @@ const handleSubmit = async (e) => {
             
             <button
               type="submit"
-              className="w-full py-2 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-medium rounded-md hover:opacity-90 transition-opacity shadow-md"
+              className="w-full cursor-pointer py-2 px-4 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-medium rounded-md hover:opacity-90 transition-opacity shadow-md"
             >
               {type === 'login' ? 'Sign In' : 'Create Account'}
             </button>
@@ -226,7 +226,7 @@ const handleSubmit = async (e) => {
               <button
                 onClick={() => {
                   setType(type === 'login' ? 'signup' : 'login');
-                  // setIsLogin(!isLogin);
+                  setIsLogin(!isLogin);
                   // console.log(isLogin)
                 }}
                 className="ml-1 text-emerald-600 hover:text-emerald-800 transition-colors font-medium"

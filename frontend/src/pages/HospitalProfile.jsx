@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { RiseLoader } from "react-spinners";
+import { useAppContext } from "../context/AppContext";
+import { Check, X } from "lucide-react";
+
 
 const HospitalProfile = () => {
+    const { navigate, fetchUser } = useAppContext()
     const { hospitalId } = useParams();
     const [hospital, setHospital] = useState(null);
     const [doctors, setDoctors] = useState([]);
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
+    const [selectedAvatar, setSelectedAvatar] = useState(null);
     const [filters, setFilters] = useState({
         search: "",
         specialization: [],
+        verificationStatus: "all"
     });
 
     const [pagination, setPagination] = useState({
@@ -44,7 +51,7 @@ const HospitalProfile = () => {
                 }
             );
             const data = await res.json();
-            console.log(data);
+            // console.log(data);
             if (!res.ok) throw new Error(data.message);
             setHospital(data.data);
         } catch (err) {
@@ -62,13 +69,17 @@ const HospitalProfile = () => {
                 query: filters.search || filters.specialization
             });
 
+            if (filters.verificationStatus !== "all") {
+                queryParams.append("verified", filters.verificationStatus === "verified");
+            }
+
             console.log(queryParams.toString());
             const res = await fetch(
                 `${import.meta.env.VITE_BACKEND_URL}/doctors/get-all-doctors?${queryParams.toString()}`,
                 { credentials: "include" }
             );
             const data = await res.json();
-            // console.log(data)
+            console.log(data)
             if (!res.ok) throw new Error(data.message);
 
             setDoctors(data.data.docs);
@@ -82,6 +93,30 @@ const HospitalProfile = () => {
             toast.error(err.message);
         }
     };
+
+    const handleToggleVerification = async (doctorId) => {
+        try {
+            const res = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/doctors/change-verification`,
+                {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ doctorId }),
+                }
+            );
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+            toast.success("Verification status updated.");
+            fetchDoctors(pagination.page); // Refresh the list
+        } catch (err) {
+            toast.error(err.message || "Failed to update verification.");
+        }
+    };
+
 
     const handleCheckboxChange = (value) => {
         setFilters((prev) => {
@@ -105,20 +140,49 @@ const HospitalProfile = () => {
     useEffect(() => {
         fetchHospital();
         fetchDoctors(1);
-    }, [hospitalId]);
+    }, [hospitalId, filters.verificationStatus]);
 
-    // if (!hospital) return (
-    //     <div className="flex justify-center items-center h-screen bg-gray-100">
-    //         <RiseLoader color="#80ff6f" size={15} margin={2} />
-    //     </div>
-    // );
+    const handleAvatarUpload = async () => {
+        if (!selectedAvatar) {
+            toast.error("Please select an image.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("avatar", selectedAvatar);
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/avatar`, {
+                method: 'PATCH',
+                credentials: 'include',
+                body: formData
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || "Failed to upload avatar");
+
+            toast.success("Avatar updated!");
+            setShowAvatarModal(false);
+            setSelectedAvatar(null);
+            await fetchUser(); // Refresh avatar
+        } catch (err) {
+            toast.error(err.message || "Upload failed");
+            console.error(err);
+        }
+    };
+
+    if (!hospital) return (
+        <div className="flex justify-center items-center h-screen bg-gray-100">
+            <RiseLoader color="#80ff6f" size={15} margin={2} />
+        </div>
+    );
 
     return (
         <>
             <Navbar showMiddle={false} />
             <div className="p-6 flex gap-6 min-h-screen bg-gray-50">
                 {/* Left Filter Panel */}
-                <div className="w-1/4 space-y-6 bg-white rounded-xl shadow p-4 h-fit sticky top-20">
+                <div className="w-1/4 space-y-6 bg-white rounded-xl shadow p-4 h-fit sticky top-20 animate-fadeInUp">
                     <input
                         type="text"
                         placeholder="Search doctor by name"
@@ -164,11 +228,12 @@ const HospitalProfile = () => {
                 <div className="w-3/4 space-y-6">
                     {/* Hospital Info */}
                     {hospital && (
-                        <div className="bg-white p-6 rounded-xl shadow flex gap-6 items-center">
+                        <div className="bg-white p-6 rounded-xl shadow flex gap-6 items-center animate-fadeInRight">
                             <img
                                 src={hospital.user?.avatar}
                                 alt="Hospital Avatar"
-                                className="w-28 h-28 object-cover rounded-full border"
+                                onClick={() => setShowAvatarModal(true)}
+                                className="w-28 h-28 object-cover rounded-full border cursor-pointer hover:opacity-90 "
                             />
                             <div className="space-y-1">
                                 <h1 className="text-2xl font-bold">{hospital.name}</h1>
@@ -188,21 +253,45 @@ const HospitalProfile = () => {
 
                     {/* Doctor List */}
                     <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h1 className="text-4xl font-bold animate-fadeInRight">Doctors</h1>
+                            <select
+                                value={filters.verificationStatus}
+                                onChange={(e) =>
+                                    setFilters((prev) => ({
+                                        ...prev,
+                                        verificationStatus: e.target.value,
+                                    }))
+                                }
+                                className="border px-3 py-1 rounded"
+                            >
+                                <option value="verified">Verified</option>
+                                <option value="unverified">Unverified</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+
                         {doctors.length ? (
                             doctors.map((doc) => (
                                 <div
                                     key={doc._id}
-                                    className="bg-white p-4 rounded-lg shadow hover:shadow-lg transition flex justify-between items-center"
+                                    className="bg-white animate-fadeInRight p-4 rounded-lg shadow hover:shadow-lg transition flex justify-between items-center"
                                 >
                                     <div className="flex gap-4 items-start">
                                         <img
                                             src={doc.user?.avatar}
                                             alt={doc.user?.fullName}
-                                            className="w-20 h-20 object-cover rounded-full border"
+                                            onClick={() => { navigate(`doctors/${doc._id}`) }}
+                                            className="w-20 h-20 object-cover rounded-full border hover:brightness-90 cursor-pointer"
                                         />
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <h2 className="text-xl font-semibold">{doc.user?.fullName}</h2>
+                                                <h2
+                                                    onClick={() => { navigate(`doctors/${doc._id}`) }}
+                                                    className="text-xl font-semibold cursor-pointer"
+                                                >
+                                                    {doc.user?.fullName}
+                                                </h2>
                                                 {doc.verified && (
                                                     <span className="text-green-600 text-sm font-semibold">✔ Verified</span>
                                                 )}
@@ -213,16 +302,18 @@ const HospitalProfile = () => {
                                         </div>
                                     </div>
 
-                                    <button
-                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-                                        onClick={() => {
-                                            // TODO: add your booking logic here, e.g. navigate or open modal
-                                            alert(`Booking appointment with Dr. ${doc.user?.fullName}`);
-                                        }}
-                                    >
-                                        Book Appointment
-                                    </button>
+                                    <div className="flex gap-2 items-center">
+                                        <button
+                                            onClick={() => handleToggleVerification(doc._id)}
+                                            className={`p-2 rounded-full border transition hover:scale-110 ${doc.verified ?  "text-red-600 border-red-600" :"text-green-600 border-green-600" 
+                                                }`}
+                                            title={doc.verified ? "Unverify" : "Verify"}
+                                        >
+                                            {doc.verified ? <X size={20} /> : <Check size={20} />}
+                                        </button>
+                                    </div>
                                 </div>
+
                             ))
                         ) : (
                             <p className="text-gray-500 text-center mt-4 text-lg">
@@ -315,6 +406,35 @@ const HospitalProfile = () => {
                     )}
                 </div>
             </div>
+
+            {showAvatarModal && (
+                <div className="fixed inset-0 bg-black/70 flex justify-center items-center  z-50">
+                    <div className="bg-white p-6 rounded-xl shadow-md w-[90%] max-w-md">
+                        <h3 className="text-xl font-bold mb-4">Upload New Avatar</h3>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setSelectedAvatar(e.target.files[0])}
+                            className="w-full p-2 border rounded"
+                        />
+
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button className="px-4 py-1 border rounded" onClick={() => {
+                                setShowAvatarModal(false);
+                                setSelectedAvatar(null);
+                            }}>
+                                Cancel
+                            </button>
+                            <button
+                                className="px-4 py-1 bg-primary hover:bg-primary-dull text-white rounded"
+                                onClick={handleAvatarUpload}
+                            >
+                                Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

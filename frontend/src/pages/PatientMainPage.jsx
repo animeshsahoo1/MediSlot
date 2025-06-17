@@ -54,6 +54,14 @@ const PatientMainPage = () => {
         }
     };
 
+    const fetchNearbyHospital=async()=>{
+        try {
+            
+        } catch (err) {
+            toast.error(err.message || 'Failed to fetch hospitals');
+        }
+    }
+
     const handleSearch = () => {
         fetchHospitals(1);
     };
@@ -89,11 +97,11 @@ const PatientMainPage = () => {
                     {/* Left Section */}
                     <div className="flex-1">
                         <div className="mb-8">
-                            <h2 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3">
+                            <h2 className="text-4xl font-bold text-gray-800 mb-2 flex items-center gap-3 animate-fadeInRight">
                                 <Building className="text-blue-600" size={28} />
-                                Hospitals in {location.state || 'your area'}
+                                Search For Hospitals in Your Area
                             </h2>
-                            <p className="text-gray-600 text-lg">Discover quality healthcare near you</p>
+                            <p className="text-gray-600 text-lg animate-fadeInRight">Discover quality healthcare near you</p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-6">
@@ -103,7 +111,7 @@ const PatientMainPage = () => {
                                         navigate(`hospitals/${hospital._id}`)
                                     }}
                                     key={hospital._id}
-                                    className="group p-4 rounded-2xl cursor-pointer bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-l-4 border-blue-500"
+                                    className="group p-4 rounded-2xl cursor-pointer animate-fadeInRight bg-white shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-l-4 border-blue-500"
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className="bg-blue-100 p-4 rounded-lg">
@@ -133,7 +141,7 @@ const PatientMainPage = () => {
 
                         {/* Pagination */}
                         {pagination.totalPages > 1 && (
-                            <div className="mt-6 flex justify-center items-center gap-3">
+                            <div className="mt-6 flex justify-center items-center gap-3 animate-fadeInRight">
                                 <button
                                     disabled={!pagination.hasPrevPage}
                                     onClick={() => fetchHospitals(pagination.page - 1)}
@@ -156,7 +164,7 @@ const PatientMainPage = () => {
                     </div>
 
                     {/* Right Section */}
-                    <div className="w-full md:w-96">
+                    <div className="w-full md:w-96 animate-fadeInUp">
                         <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 sticky top-6">
                             <h3 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
                                 <Search className="text-blue-600" size={24} />
@@ -204,7 +212,7 @@ const PatientMainPage = () => {
 
                                 <button
                                     onClick={handleFindNearby}
-                                    className="w-full bg-gray-50 hover:bg-gray-100 text-gray-800 py-4 rounded-xl font-semibold transition-all border-2 border-dashed border-gray-200 hover:border-solid hover:border-blue-200 flex items-center justify-center gap-2"
+                                    className="w-full bg-gray-50 cursor-pointer hover:bg-gray-100 text-gray-800 py-4 rounded-xl font-semibold transition-all border-2 border-dashed border-gray-200 hover:border-solid hover:border-blue-200 flex items-center justify-center gap-2"
                                 >
                                     <Navigation className="text-blue-500" size={20} />
                                     Find Nearby Hospitals

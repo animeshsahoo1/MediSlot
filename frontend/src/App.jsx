@@ -12,6 +12,8 @@ import DoctorProfile from './pages/DoctorProfile'
 import PatientMainPage from './pages/PatientMainPage'
 import HospitalMainPage from './pages/HospitalMainPage'
 import HospitalProfile from './pages/HospitalProfile'
+import DoctorMainPage from './pages/DoctorMainPage'
+import PaymentSuccess from './pages/PaymentSuccess'
 
 const App = () => {
   return (
@@ -33,6 +35,9 @@ const App = () => {
         <Route path='/doctors/complete' element={<CompleteDoctor/>}></Route>
         <Route path='/doctors/set-schedule' element={<DoctorScheduleForm/>}></Route>
         <Route path='/doctors/profile' element={<DoctorProfile/>}></Route>
+        <Route path='/doctors/:doctorId' element={<DoctorMainPage/>}></Route>
+        {/* payment  */}
+        <Route path="/payment-success" element={<PaymentSuccess />} />
       </Routes>
 
     </div>

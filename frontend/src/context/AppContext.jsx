@@ -25,12 +25,12 @@ export const AppContextProvider = ({ children }) => {
             // console.log(response);
 
             if (res.ok) {
+                setAvatar(response.data.avatar?.trim() || assets.default_avatar)
                 setUser(response.data);
                 setIsAuthenticated(true);
                 // console.log(response.data.role)
                 const newRole = response.data.role;
                 setGlobalRole(newRole);
-                setAvatar(response.data.avatar?.trim() || assets.default_avatar)
                 
             } else {
                 setUser(null);
@@ -59,7 +59,7 @@ export const AppContextProvider = ({ children }) => {
 
     //!Important: call fetchUser() after login/signup to refresh context,also remove all states during logout
 
-    const value = { user, setUser, navigate, isAuthenticated, loading, setLoading, globalRole, avatar, fetchUser };
+    const value = { user, setUser, navigate, isAuthenticated,setIsAuthenticated, loading, setLoading, globalRole, avatar, fetchUser };
 
     //step2:wrap everything u want to send in a context provider 
     return <AppContext.Provider value={value}>

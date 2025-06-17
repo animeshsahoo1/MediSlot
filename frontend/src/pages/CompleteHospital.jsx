@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
+import { RiseLoader } from 'react-spinners';
+import { useAppContext } from '../context/AppContext';
 
 const CompleteHospital = () => {
+  const {user,navigate}=useAppContext()
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
     HRN: '',
@@ -70,6 +74,40 @@ const CompleteHospital = () => {
       alert(err.message);
     }
   };
+
+  const checkAndFetchHospital = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/hospitals/get-hospital`, {
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.data) {
+        navigate('/hospitals/profile'); // redirect if patient already exists
+      }
+    } catch (err) {
+      console.error("Error checking hospital:", err);
+      //no toast error, since it may just mean patient doesn't exist yet
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      checkAndFetchHospital();
+    } 
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <RiseLoader color="#80ff6f" size={15} margin={2} />
+      </div>
+    );
+  }
+
+
 
   return (
     <>

@@ -1,15 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
+import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
+import { RiseLoader } from 'react-spinners';
 
 const CompletePatient = () => {
+  const {user} = useAppContext(); // if fetchUser exists
+  const [loading, setLoading] = useState(true);
   const [dob, setDob] = useState('');
   const [gender, setGender] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // handle form submission logic here
-    console.log({ dob, gender });
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/patients/create-patient`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dob, gender }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Something went wrong');
+      
+      toast.success('Patient info saved successfully');
+      navigate('/patients');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save patient info');
+    }
   };
+  const checkAndFetchPatient = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/patients/get-patient-details`, {
+        credentials: 'include',
+      });
+      const data = await res.json();
+
+      if (res.ok && data?.data) {
+        navigate('/patients'); // redirect if patient already exists
+      }
+    } catch (err) {
+      console.error("Error checking patient:", err);
+      //no toast error, since it may just mean patient doesn't exist yet
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      checkAndFetchPatient();
+    } 
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-gray-100">
+        <RiseLoader color="#80ff6f" size={15} margin={2} />
+      </div>
+    );
+  }
 
   return (
     <>

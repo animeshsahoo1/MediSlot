@@ -3,6 +3,9 @@ import Navbar from '../components/Navbar';
 import { useAppContext } from '../context/AppContext';
 import { toast } from 'react-hot-toast';
 import { RiseLoader } from "react-spinners";
+import { XCircle } from 'lucide-react';
+import { assets } from '../assets_frontend/assets';
+
 
 const PatientProfile = () => {
     const { user, fetchUser, navigate, globalRole } = useAppContext();
@@ -18,6 +21,9 @@ const PatientProfile = () => {
         gender: '',
         dob: ''
     });
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+
 
     useEffect(() => {
         const fetchPatient = async () => {
@@ -97,45 +103,68 @@ const PatientProfile = () => {
         }
     };
 
+    const fetchAppointments = async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/patients/get-appointments-for-patient`, {
+                credentials: 'include'
+            });
+            const response = await res.json();
+            console.log(response)
+            if (!res.ok) throw new Error(response.message || 'Failed to fetch appointments');
+            setAppointments(response.data);
+            console.log(appointments)
+        } catch (err) {
+            toast.error(err.message);
+            console.error(err);
+        }
+    };
+
+    const cancelAppointment = async (id) => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/appointments/change-status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    appointmentId: id,
+                    status: "cancelled"
+                }),
+            })
+
+            if (!res.ok) throw new Error('Failed to cancel appointment');
+            toast.success('appointment cancelled')
+            await fetchAppointments()
+
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || 'deletion failed');
+        }
+    }
+
+
+    const handlePayOnline = async (appointmentId) => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}/checkout`, {
+                method: 'POST',
+                credentials: 'include',
+                
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Failed to initiate payment');
+
+            // Redirect to Stripe's Checkout page
+            window.location.href = data.url;
+        } catch (err) {
+            toast.error(err.message || 'Something went wrong');
+            console.error(err);
+        }
+    };
+
+
+
     useEffect(() => {
         if (!patient) return;
-
-        const fetchAppointments = async () => {
-            try {
-                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/patients/get-appointments-for-patient`, {
-                    credentials: 'include'
-                });
-                const response = await res.json();
-                if (!res.ok) throw new Error(response.message || 'Failed to fetch appointments');
-
-                const enrichedAppointments = await Promise.all(response.data.map(async (appointment) => {
-                    const doctorRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/doctors/${appointment.doctorId}`, {//inside route write /doctors/:id
-                        credentials: 'include'
-                    });
-                    const doctorData = await doctorRes.json();
-                    if (!doctorRes.ok) throw new Error(doctorData.message || 'Failed to fetch doctor');
-
-                    const userRes = await fetch(`${import.meta.env.VITE_BACKEND_URL}/users/${doctorData.data.user}`, {
-                        credentials: 'include'
-                    });
-                    const userData = await userRes.json();
-                    if (!userRes.ok) throw new Error(userData.message || 'Failed to fetch doctor user');
-
-                    return {
-                        ...appointment,
-                        doctorName: doctorData.data.fullName,
-                        doctorAvatar: userData.data.avatar,
-                    };
-                }));
-
-                setAppointments(enrichedAppointments);
-                console.log(appointments)
-            } catch (err) {
-                toast.error(err.message);
-                console.error(err);
-            }
-        };
-
         fetchAppointments();
     }, [patient]);
 
@@ -169,9 +198,13 @@ const PatientProfile = () => {
     };
 
 
-
-
-
+    useEffect(()=>{
+        toast("please complete payment of any pending appointment to confirm it", {
+                position: 'top-center',
+                duration: 3000,
+                icon: 'ℹ️',
+            })
+    },[])
 
 
     if (!patient) return (
@@ -187,7 +220,7 @@ const PatientProfile = () => {
                 <h2 className="text-2xl font-semibold">Patient Profile</h2>
                 <div className="flex gap-10">
                     {/* Left Section */}
-                    <div className="w-1/3 bg-white rounded-xl p-4 shadow-md text-center">
+                    <div className="w-1/3 bg-white rounded-xl p-4 shadow-md text-center animate-fadeInRight">
                         <img
                             src={user.avatar}
                             alt="Avatar"
@@ -200,7 +233,7 @@ const PatientProfile = () => {
                     </div>
 
                     {/* Right Section */}
-                    <div className="w-2/3 bg-white rounded-xl p-4 shadow-md">
+                    <div className="w-2/3 bg-white rounded-xl p-4 shadow-md animate-fadeInUp">
                         <div className="flex justify-between items-center">
                             <h3 className="text-xl font-semibold">Details</h3>
                             <button
@@ -220,7 +253,7 @@ const PatientProfile = () => {
                 </div>
 
                 {/* Optional lower section */}
-                <div className="bg-white rounded-xl p-4 shadow-md min-h-[350px]">
+                <div className="bg-white rounded-xl p-4 shadow-md min-h-[350px] animate-fadeInUp">
                     <div className='flex justify-between items-center'>
                         <h2 className="text-4xl font-semibold">Appointments</h2>
                         <button
@@ -232,28 +265,108 @@ const PatientProfile = () => {
                         </button>
 
                     </div>
-                    <div className="grid gap-4 mt-4">
-                        {appointments.length ? appointments.map((appt) => (
-                            <div key={appt._id} className="flex items-center bg-gray-50 p-4 rounded-xl shadow">
-                                <img src={appt.doctorAvatar} alt="Doctor" className="w-16 h-16 rounded-full object-cover mr-4" />
-                                <div className="flex-1">
-                                    <h4 className="text-lg font-semibold">{appt.doctorName}</h4>
-                                    <p><strong>Date:</strong> {appt.date?.split('T')[0]}</p>
-                                    <p><strong>Time:</strong> {appt.startTime} - {appt.endTime}</p>
-                                    <p><strong>Status:</strong> {appt.status}</p>
-                                </div>
-                            </div>
-                        )) : (<h1 className="text-center text-2xl font-semibold text-gray-500 mt-12 p-6">
-                            🚫 No Appointments Found
-                        </h1>)}
+                    <div className="space-y-2 mt-4">
+                        {appointments.length ? (
+                            appointments
+                                .map((appt) => (
+                                    <div
+                                        key={appt._id}
+                                        className="p-3 bg-white rounded shadow text-sm flex items-center justify-between gap-4 animate-fadeInRight"
+                                    >
+                                        {/* Avatar */}
+                                        <img
+                                            src={appt.doctor.user.avatar}
+                                            alt="Doctor Avatar"
+                                            className="w-14 h-14 rounded-full object-cover border"
+                                        />
+
+                                        {/* Info */}
+                                        <div className="flex-1">
+                                            <p>
+                                                <strong>Doctor:</strong> {appt.doctor.user.fullName}
+                                            </p>
+                                            <p>
+                                                <strong>Date:</strong>{' '}
+                                                {new Date(appt.startTime).toLocaleDateString(undefined, {
+                                                    weekday: "long",
+                                                    year: "numeric",
+                                                    month: "long",
+                                                    day: "numeric",
+                                                })}
+                                            </p>
+                                            <p>
+                                                <strong>Time:</strong>{' '}
+                                                {new Date(appt.startTime).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}{' '}
+                                                -{' '}
+                                                {new Date(appt.endTime).toLocaleTimeString([], {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                })}
+                                            </p>
+                                            {appt.status === 'pending' && (
+                                                <img
+                                                    src={assets.stripe_logo}
+                                                    title='Pay with stripe'
+                                                    alt="Pay with Stripe"
+                                                    onClick={() => handlePayOnline(appt._id)}
+                                                    className="mt-2 px-3 py-1 cursor-pointer border hover:brightness-80 border-black rounded h-6"
+                                                />
+
+                                            )}
+                                        </div>
+
+                                        {/* Fee + Status */}
+                                        <div className="text-center space-y-1 min-w-[90px]">
+                                            <div className="text-gray-800 font-semibold">₹{appt.fee}</div>
+                                            <div
+                                                className={`px-3 py-1 rounded-full text-xs font-semibold text-white text-center ${appt.status === 'pending'
+                                                    ? 'bg-yellow-500'
+                                                    : appt.status === 'completed'
+                                                        ? 'bg-green-600'
+                                                        : appt.status === 'cancelled'
+                                                            ? 'bg-red-600' : 'bg-gray-400'
+                                                    }`}
+                                            >
+                                                {appt.status}
+                                            </div>
+                                        </div>
+
+                                        {/* Cancel Button */}
+                                        {appt.status === 'cancelled' ? (
+                                            ""
+                                        ) : (
+                                            <button
+                                                title="Cancel Appointment"
+                                                className="text-red-500 z-10 cursor-pointer text-xl p-2 rounded-full hover:scale-110 hover:text-red-600 hover:bg-red-200 transition"
+                                                onClick={() => {
+                                                    setAppointmentToCancel(appt._id);
+                                                    setConfirmModalOpen(true);
+                                                }}
+                                            >
+                                                <XCircle className="w-5 h-5" />
+                                            </button>
+
+                                        )}
+                                    </div>
+                                ))
+                        ) : (
+                            <h1 className="text-center text-2xl font-semibold text-gray-500 mt-12 p-6">
+                                🚫 No Appointments Found
+                            </h1>
+                        )}
                     </div>
+
+
 
                 </div>
             </div>
 
             {/* Edit Modal */}
             {showEditModal && (
-                <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+                <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50 animate-fadeInUp">
                     <div className="bg-white p-6 rounded-xl shadow-md w-[90%] max-w-md">
                         <h3 className="text-xl font-bold mb-4">Edit Profile</h3>
                         <div className="space-y-3">
@@ -277,6 +390,7 @@ const PatientProfile = () => {
                 </div>
             )}
 
+            {/* upload avatar modal  */}
             {showAvatarModal && (
                 <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
                     <div className="bg-white p-6 rounded-xl shadow-md w-[90%] max-w-md">
@@ -289,14 +403,14 @@ const PatientProfile = () => {
                         />
 
                         <div className="mt-4 flex justify-end gap-2">
-                            <button className="px-4 py-1 border rounded" onClick={() => {
+                            <button className="px-4 py-1 border rounded cursor-pointer" onClick={() => {
                                 setShowAvatarModal(false);
                                 setSelectedAvatar(null);
                             }}>
                                 Cancel
                             </button>
                             <button
-                                className="px-4 py-1 bg-primary hover:bg-primary-dull text-white rounded"
+                                className="px-4 py-1 bg-primary hover:bg-primary-dull cursor-pointer text-white rounded"
                                 onClick={handleAvatarUpload}
                             >
                                 Upload
@@ -305,6 +419,38 @@ const PatientProfile = () => {
                     </div>
                 </div>
             )}
+
+            {/* appointment cancel modal */}
+            {confirmModalOpen && (
+                <div className="fixed inset-0 bg-black/70 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-xl shadow-md w-[90%] max-w-sm">
+                        <h3 className="text-lg font-semibold mb-4">Confirm Cancellation</h3>
+                        <p>Are you sure you want to cancel this appointment?</p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                className="px-4 py-1 border cursor-pointer rounded"
+                                onClick={() => {
+                                    setConfirmModalOpen(false);
+                                    setAppointmentToCancel(null);
+                                }}
+                            >
+                                No
+                            </button>
+                            <button
+                                className="px-4 py-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded"
+                                onClick={async () => {
+                                    await cancelAppointment(appointmentToCancel);
+                                    setConfirmModalOpen(false);
+                                    setAppointmentToCancel(null);
+                                }}
+                            >
+                                Yes, Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
         </>
     );
