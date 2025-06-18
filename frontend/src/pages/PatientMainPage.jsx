@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import { toast } from 'react-hot-toast';
-import { Search, MapPin, Navigation, Building, Heading1 } from 'lucide-react';
+import { Search, MapPin, Navigation, Building } from 'lucide-react';
 import { formatAddress } from '../utils/formatAdress';
 import { RiseLoader } from "react-spinners";
 import { useAppContext } from '../context/AppContext';
+import MapContainer from "../components/MapContainer";
 
 const PatientMainPage = () => {
     const { user, navigate } = useAppContext()
@@ -14,14 +15,62 @@ const PatientMainPage = () => {
         state: '',
     });
     const [searchQuery, setSearchQuery] = useState('');
-    const [location, setLocation] = useState({ city: '', state: '' });
-
     const [pagination, setPagination] = useState({
         page: 1,
         totalPages: 1,
         hasNextPage: false,
         hasPrevPage: false,
     });
+
+    const [showMap, setShowMap] = useState(false);
+    const [nearbyHospitals, setNearbyHospitals] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
+    const [markerIndex, setMarkerIndex] = useState(-1);
+    const [locInfo, setLocInfo] = useState([]);
+    const [viewPort, setViewPort] = useState({
+        latitude: 22.5726,
+        longitude: 88.3639,
+        zoom: 12,
+        pitch: 0,//makes the map more 3d higher the value is
+    });
+
+    const focusOnMarkerHandler = (index) => {
+        if (!locInfo[index]) return;
+        setMarkerIndex(index);
+        setViewPort((prevData) => {
+            return {
+                ...prevData,
+                latitude: locInfo[index].lat,
+                longitude: locInfo[index].lon,
+            };
+        });
+    };
+
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                setUserLocation({ lat: latitude, lon: longitude });
+
+                setViewPort((prev) => ({
+                    ...prev,
+                    latitude,
+                    longitude
+                }));
+
+                setLocInfo((prev) => [
+                    ...prev,
+                    {
+                        lon: longitude,
+                        lat: latitude,
+                        name: "You",
+                    }
+                ])
+            },
+            (err) => console.error("Geolocation error:", err),
+            { enableHighAccuracy: true }
+        );
+    }, []);
 
     const fetchHospitals = async (page = 1) => {
         try {
@@ -48,15 +97,37 @@ const PatientMainPage = () => {
                 hasNextPage: response.data.hasNextPage,
                 hasPrevPage: response.data.hasPrevPage,
             });
-            setLocation(response.location || {});
         } catch (err) {
             toast.error(err.message || 'Failed to fetch hospitals');
         }
     };
 
-    const fetchNearbyHospital=async()=>{
+    const fetchNearbyHospital = async () => {
         try {
-            
+            const { lat, lon } = userLocation;
+            const res = await fetch(
+                `${import.meta.env.VITE_BACKEND_URL}/patients/get-nearby-hospitals?lat=${lat}&lon=${lon}`,
+                {
+                    credentials: "include",
+                }
+            );
+            const data = await res.json();
+            console.log(data);
+
+            if (!res.ok) throw new Error(data.message);
+            setNearbyHospitals(data);
+            setLocInfo((prev) => [
+                ...prev,
+                ...data.data.map((hospital) => ({
+                    lon: hospital.location.coordinates[0],
+                    lat: hospital.location.coordinates[1],
+                    name: hospital.name,
+                    place: "Hospital",
+                })),
+            ]);
+
+
+
         } catch (err) {
             toast.error(err.message || 'Failed to fetch hospitals');
         }
@@ -67,7 +138,7 @@ const PatientMainPage = () => {
     };
 
     const handleFindNearby = () => {
-        fetchHospitals(1);
+        fetchNearbyHospital();
     };
 
     const handleInputChange = (e) => {
@@ -107,7 +178,7 @@ const PatientMainPage = () => {
                         <div className="grid grid-cols-1 gap-6">
                             {hospitals.length ? hospitals.map(hospital => (
                                 <div
-                                    onClick={()=>{
+                                    onClick={() => {
                                         navigate(`hospitals/${hospital._id}`)
                                     }}
                                     key={hospital._id}
@@ -134,7 +205,7 @@ const PatientMainPage = () => {
                                     </div>
                                 </div>
                             )) : (<h1 className="text-center text-2xl font-semibold text-gray-500 mt-12 p-6">
-                                🚫 No Hospitals Found 
+                                🚫 No Hospitals Found
                             </h1>)
                             }
                         </div>
@@ -211,7 +282,10 @@ const PatientMainPage = () => {
                                 </button>
 
                                 <button
-                                    onClick={handleFindNearby}
+                                    onClick={() => {
+                                        setShowMap(true);
+                                        handleFindNearby();
+                                    }}
                                     className="w-full bg-gray-50 cursor-pointer hover:bg-gray-100 text-gray-800 py-4 rounded-xl font-semibold transition-all border-2 border-dashed border-gray-200 hover:border-solid hover:border-blue-200 flex items-center justify-center gap-2"
                                 >
                                     <Navigation className="text-blue-500" size={20} />
@@ -222,6 +296,34 @@ const PatientMainPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* map pop up */}
+            {showMap && nearbyHospitals && userLocation && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 animate-fadeInUp">
+                    <div className="relative bg-white w-[90vw] max-w-[700px] aspect-square rounded-lg shadow-lg">
+
+
+                        {/* Optional Close Button - top center */}
+                        <button
+                            onClick={() => setShowMap(false)}
+                            className="absolute z-10 top-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-3 py-1 rounded-full text-sm shadow hover:bg-red-600 transition"
+                        >
+                            Close Map
+                        </button>
+
+                        <MapContainer
+                            markerIndex={markerIndex}
+                            locInfo={locInfo}
+                            viewPort={viewPort}
+                            onviewPortChange={(vp) => {
+                                setViewPort(vp);
+                                if (markerIndex !== -1) setMarkerIndex(-1);
+                            }}
+                            focusOnMarker={focusOnMarkerHandler}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 };

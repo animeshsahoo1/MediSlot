@@ -6,11 +6,19 @@ import stripeRoute from "./routes/stripe.route.js"
 const app=express()
 
 //cors middleware
+const allowedOrigins = process.env.CORS_ORIGIN.split(',');
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true
-}))
+  origin: (origin, callback) => {
+    // allow non-browser requests or those from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 // Stripe webhook requires raw body, so this must come before express.json()
 app.use('/api/v1/stripe', stripeRoute);
